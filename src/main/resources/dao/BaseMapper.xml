@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="dao.BaseMapper">
+    <!--查询分类列表-->
+    <select id="selectCategoryList" resultType="Category" parameterType="string">
+        SELECT * FROM tp_noneunit WHERE 1 = 1 AND ${query}
+    </select>
+
+    <!--判断分类是否存在-->
+    <select id="selectCategoryExists" resultType="integer">
+        SELECT IFNULL(COUNT(*),0) FROM tp_demand_category WHERE 1 = 1 AND id = #{pinzhongid}
+    </select>
+
+    <!--删除分类-->
+    <delete id="deleteCategory" parameterType="string">
+        DELETE FROM tp_category2 WHERE 1 = 1 AND ${query}
+    </delete>
+
+    <select id="selectTypeList" parameterType="int" resultType="bean.Type">
+      SELECT * FROM tp_type where catid = #{catid}
+    </select>
+    <insert id="replaceCategory" parameterType="bean.Category">
+        INSERT INTO `tp_noneunit_copy` (`id`, `title`, `parentid`, `sort`,  `path`,pathname, `level`, mappingId,page)
+        VALUES (
+                  #{category.id},
+                  #{category.title} ,
+                  #{category.parentid} ,
+                  #{category.sort},
+                  #{category.path},
+                  #{category.pathname},
+                  #{category.level},
+                  #{category.mappingId},
+                  #{category.page}
+                )
+    </insert>
+    <insert id="insertType">
+        INSERT INTO `tp_type`
+        (`catid`,`type`,`title`) VALUES
+        (#{catid}, #{type}, #{title})
+    </insert>
+
+    <insert id="insertProduceList">
+        INSERT INTO `lz_produce`
+        (`produceName`, `unit`, `price`, `priceTe`, `dutySpan`, `typeName`, `typeId`, `categoryId`) VALUES
+        <foreach collection="list" item="item" index="index" separator=",">
+            (
+            #{item.pName}, #{item.unit},#{item.price}, #{item.priceTe}, #{item.dutySpan}, #{item.typeName},
+            #{item.typeId} , #{item.categoryId}
+            )
+        </foreach>
+    </insert>
+
+    <insert id="insertAttribute">
+        INSERT INTO `tp_attribute2` ( `title`, `catid`, `vals`, `sort`)
+        VALUES ( #{attribute.title}, #{attribute.catid}, #{attribute.vals}, #{attribute.sort} )
+    </insert>
+
+    <insert id="insertUnit">
+        INSERT INTO `tp_category_unit` ( `catid`, `unit_name`,`unit_value`,`sort`, `status`)
+        VALUES ( #{unit.catid}, #{unit.unit_name},#{unit.unit_value}, #{unit.sort}, #{unit.status} )
+    </insert>
+
+    <update id="changeExecute">
+        UPDATE `tp_noneunit` SET `is_execute`= 1 WHERE `id`= #{id}
+    </update>
+
+
+    <select id="selectNames" resultType="string">
+        SELECT produceName FROM lz_produce WHERE typeName  = #{pinzhong} GROUP BY produceName
+    </select>
+
+    <!--<select id="selectUnits" resultType="string">-->
+    <!--SELECT unit FROM lz_produce WHERE typeName  = #{pinzhong}  GROUP BY unit-->
+    <!--</select>-->
+
+    <delete id="deleteCategoryByParentId">
+          DELETE FROM tp_category2 WHERE parentid = #{id}
+    </delete>
+
+    <delete id="deleteProduceByCatId">
+        DELETE FROM lz_produce WHERE categoryId =  #{id}
+    </delete>
+
+    <delete id="deleteUnitByCatId">
+        DELETE FROM tp_category_unit2 WHERE catid =  #{id}
+    </delete>
+
+    <!--查询品种是否存在-->
+    <select id="selectVarietyExist" parameterType="string" resultType="integer">
+      SELECT IFNULL(COUNT(*),0) FROM pinzhong WHERE 1 = 1 and  id = #{pinzhongid}
+    </select>
+
+    <select id="selectVarietyName" parameterType="string" resultType="integer">
+        SELECT IFNULL(COUNT(*),0) FROM pinzhong WHERE 1 = 1 and  `name` like  #{name}
+    </select>
+
+    <select id="selectMappings" resultType="map">
+        SELECT
+        c.*, d.title AS "first_name"
+        FROM
+        (
+        SELECT
+        a.id,
+        a.title,
+        a.mappingId,
+        a.`level`,
+        b.title AS "second_name",
+        b.parentid
+        FROM
+        tp_noneunit_copy a,
+        tp_noneunit_copy b
+        WHERE
+        a.parentid = b.id
+        AND a. LEVEL = 2
+        ) c,
+        tp_noneunit_copy d
+        WHERE
+        c.parentid = d.id
+        AND c.`level` = 2
+        ORDER BY
+        c.id ASC
+    </select>
+
+    <insert id="insertPinZhong" parameterType="pojo.Variety">
+        insert into pinzhong(id,name,url,titid,path) VALUES
+        (#{id},#{name},#{url},#{titid},#{path})
+    </insert>
+    <!--插入表名表-->
+    <insert id="insertAlias" parameterType="pojo.Alias">
+        replace into tp_alias_copy(id,alias, unit, company, telephone, brand,parameters, contacts, address,titid,url,title,flag,PinZhongId,pinzhong,hsscjprice,hsmjprice,sl,`date`)
+         VALUES (#{id},#{alias},#{unit},#{company},#{telephone},#{brand},#{parameters},#{contacts},#{address},#{titid},#{url},#{title},#{flag},#{PinZhongId},#{pinzhong},
+         #{hsscjprice},#{hsmjprice},#{sl},#{date})
+    </insert>
+
+    <select id="selectSanJiLevel" resultType="pojo.Noneunit" parameterType="String">
+        SELECT * FROM tp_noneunit_copy WHERE 1 = 1 AND path like   concat(concat("0,",#{sort}),",%") and level = 2 and page != -1 order by id ASC
+
+    </select>
+
+    <select id="selectNoneunit" resultType="pojo.Noneunit" parameterType="int">
+        SELECT * FROM tp_noneunit_copy WHERE 1 = 1 AND level = #{level}
+    </select>
+    <update id="updatePage" parameterType="pojo.Noneunit">
+      update tp_noneunit_copy set page = #{page} where id = #{id}
+    </update>
+
+    <!--查询品种-->
+    <select id="selectVarietyList" resultType="pojo.Variety" parameterType="string">
+        SELECT * FROM pinzhong where name = #{name}
+    </select>
+
+    <insert id="insertUnitKey" useGeneratedKeys="true" keyProperty="id" parameterType="pojo.UnitKey">
+        INSERT into tp_unit_key_gc(unitKey, catid, cattitle)
+        VALUES (#{unitKey},#{catid},#{cattitle})
+    </insert>
+    <insert id="insertUnitValue" parameterType="pojo.UnitValue">
+       INSERT  into tp_unit_value_gc(unitValue,keyid,catid)
+       VALUES (#{unitValue}, #{keyid}, #{catid})
+    </insert>
+
+
+    <!--alibaba 方法起始位置 插入到数据库主表的-->
+    <insert id="insertTpDetail" parameterType="bean.Details" useGeneratedKeys="true" keyProperty="id">
+        insert into tp_details_copy(catid, cattitle, title, price, company, model, country, telephone, pics,unit,address,paramattr,parameter,alibburl,kv,details,detail_pics) values (#{catid},#{cattitle},#{title},#{price},#{company},#{model},#{country},#{telephone},#{pics},#{unit},#{address},#{paramattr},#{parameter},#{alibburl},#{kv},#{details},#{detail_pics})
+    </insert>
+
+    <insert id="insertkey" parameterType="bean.Keys" useGeneratedKeys="true" keyProperty="id">
+        insert into tp_unit_key(unit_key,shopid,cattitle) values (#{unit_key},#{shopid},#{cattitle})
+    </insert>
+
+    <insert id="insertvalue" parameterType="bean.Values">
+        insert into tp_unit_value values (null,#{unit_value},#{keyid},#{catid})
+    </insert>
+
+    <insert id="insertlist" parameterType="bean.AlibbList">
+        INSERT INTO alibb2 (title,url,cate,cateid) values (#{title},#{url},#{cate},#{cateid})
+    </insert>
+
+
+    <select id="selectDetails" resultType="bean.Details">
+        SELECT * FROM tp_details_copy WHERE  title = ''
+    </select>
+
+    <insert id="updateDetail" parameterType="bean.Details">
+        REPLACE  into tp_details_copy(id, catid, cattitle, title, price, company, model, country, telephone, pics,unit,address,paramattr,parameter,alibburl,kv,details,detail_pics) values (#{id},#{catid},#{cattitle},#{title},#{price},#{company},#{model},#{country},#{telephone},#{pics},#{unit},#{address},#{paramattr},#{parameter},#{alibburl},#{kv},#{details},#{detail_pics})
+    </insert>
+    <!--alibaba 方法结束位置-->
+</mapper>
