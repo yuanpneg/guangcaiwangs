@@ -42,28 +42,37 @@ public class alibabaUrl {
             "t=e4b690e0c4e598ae3408b6041e077ee0; _tb_token_=e0eebede73776; __cn_logon__=false; " +
             "h_keys=\"%u783c%u7ba1#%u8def%u706f%u6746#%u5355%u81c2%u8def%u706f#%u8def%u706f#%u94a2%u5e26%u589e%u5f3a%u6ce2%u7eb9%u7ba1#%u82b1%u5c97%u5ca9#%u6bdb%u9762%u82b1%u5c97%u5ca9#pe%u7ba1#%u710a%u63a5%u94a2%u7ba1#%u94a2%u7b4b\"; ad_prefer=\"2019/04/08 17:32:45\"; alicnweb=homeIdttS%3D95353286413309343774283810468514941277%7Ctouch_tb_at%3D1554771319476%7ChomeIdttSAction%3Dtrue%7Chp_newbuyerguide%3Dtrue; CNZZDATA1253659577=90154511-1552694034-%7C1554768221; _csrf_token=1554773145089; l=bBazx1Trvmv9wMW2BOCiquI8L__OHIRAguPRwC0Di_5IgOYsZBQOlG2nPHv6Vj5R_N8p4FNLRKy9-etlj; isg=BFxc8iMSbMTG0Ri4gvGM_gRuLXrOfQF3BsxOAjZd6ccqgf0LX-GPjdF74ancCThX";
 
-
     static {
+
         System.setProperty("webdriver.chrome.driver", "C:\\Users\\Administrator\\AppData\\Local\\Google\\Chrome\\Application\\chromedriver.exe");
 //        ChromeOptions options = new ChromeOptions();
         driver = new ChromeDriver();
     }
 
     public static void main(String[] args) {
-        alibabaUrl alibabaUrl = new alibabaUrl();
-        alibabaUrl.detail();
+        try {
+            alibabaUrl alibabaUrl = new alibabaUrl();
+            alibabaUrl.detail();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+        }
     }
 
     public void detail() {
+
+        // 代理服务器配置
+
         //查询level=3的集合
         //List<Alibbcat> keys = baseDao.selectAlibbcatlevel();
         //循环遍历集合得到想要搜索的数据
         //     for (Alibbcat k : keys) {
         //Alibbcat alibbcat = new Alibbcat();
         //获取的key的值
-        key = "球阀";
+
+        key = "墙布";
         //获取的id的值
-        keyid = "1401";
+        keyid = "2650";
         System.out.println(key);
 
         try {
@@ -75,15 +84,16 @@ public class alibabaUrl {
 //        url = "https://s.1688.com/selloffer/offer_search.htm?keywords=" + keyEncoder +
 //                "&n=y&netType=1%2C11&spm=a260k.635.3262836.d102";
         url = "https://www.1688.com/";
-        driver.get(url);
         try {
+            driver.get(url);
+            driver.manage().window().maximize();
             Thread.sleep(3000);
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         WebElement search = driver.findElement(By.id("alisearch-keywords"));
         search.sendKeys(key);
-        //driver.findElement(By.cssSelector("#alisearch-submit")).click();
+        driver.findElement(By.cssSelector("#alisearch-submit")).click();
         get();
         if (maxpage > 1) {
             for (int i = 2; i <= maxpage; i++) {
@@ -106,16 +116,17 @@ public class alibabaUrl {
         try {
             Gson gsons = new Gson();
             //下拉网页，用于加载网页的（线程每两秒下拉一次）
-            ((JavascriptExecutor) driver).executeScript("window.scrollTo(0, 2800)");
-            Thread.sleep(2 * 1000);
-            ((JavascriptExecutor) driver).executeScript("window.scrollTo(0, 6000)");
+
+            ((JavascriptExecutor) driver).executeScript("window.scrollTo(0, document.body.scrollHeight)");
             Thread.sleep(3 * 1000);
-            ((JavascriptExecutor) driver).executeScript("window.scrollTo(0, 10000)");
+            ((JavascriptExecutor) driver).executeScript("window.scrollTo(0, document.body.scrollHeight)");
+            Thread.sleep(3 * 1000);
+            ((JavascriptExecutor) driver).executeScript("window.scrollTo(0, document.body.scrollHeight)");
             Thread.sleep(3 * 1000);
             //获取最大页数的，因为每次程序只能最多抓取50页，超过的部分做判断
             maxpage = Integer.parseInt(driver.findElement(By.cssSelector(".fui-paging-num")).getText());
-            if (maxpage > 50) {
-                maxpage = 50;
+            if (maxpage > 10) {
+                maxpage = 10;
             }
             //通过sm-offer-item选择器获取每一块作为一个集合
             List<WebElement> element = driver.findElements(By.cssSelector(".sm-offer-item"));
@@ -133,10 +144,11 @@ public class alibabaUrl {
 
                 //String a = "https://detail.1688.com/offer/547186777897.html";
                 String a = webElement.findElement(By.cssSelector(".sw-dpl-offer-photoLink")).getAttribute("href");
+                System.out.println(a);
                 //String a = "https://detail.1688.com/offer/534891030593.html?spm=b26110380.sw1688.mof001/.1.b6934cdezAlbBp";
                 //这行代码的作用使用链式调用生成一个 Request 对象，每一个HTTP请求包含一个URL、一个方法（GET或POST或其他）、一些HTTP头。请求还可能包含一个特定内容类型的数据类的主体部分。
-                Request request = new Request.Builder().header("cooike",cookie).url(a).build();
-                HttpUtils.ResponseWrap responseWrap = HttpUtils.retryHttp(request, "gbk");
+                Request request = new Request.Builder().header("cooike", cookie).url(a).build();
+                HttpUtils.ResponseWrap responseWrap = HttpUtils.retryHttpNoProxy(request, "gbk");
 
                 if (responseWrap.isSuccess()) {
                     String html = responseWrap.body;
@@ -179,6 +191,9 @@ public class alibabaUrl {
                     String address = document.select(".address").select(".disc").text();
                     //联系人
                     String contact = document.select(".contactSeller").select(".link").text();
+                    if (contact.isEmpty()) {
+                        contact = document.select(".contactSeller").select("a").text();
+                    }
                     //获取电话
                     String tephone = document.select(".m-mobilephone").select(".mobile-number").text();
                     String contactpage = document.select("li.contactinfo-page").select("a").attr("href");
@@ -191,7 +206,7 @@ public class alibabaUrl {
                         tephone = getcontact(contactpage);
                     }
                     //获取参数的
-                    //先判断有没有obj-sku这个class，
+                    //先判断有没有obj-sku这个class
                     if (html.indexOf("obj-sku") != -1) {
                         //如果有就先获取下面的参数的属性
                         paramattr = document.select(".obj-sku > div.obj-header > span").text();
@@ -237,7 +252,7 @@ public class alibabaUrl {
                             for (Element el : elements) {
                                 detail_pics.append(el.attr("src")).append(",");
                             }
-                            if(detail_pics.toString().length() > 0) {
+                            if (detail_pics.toString().length() > 0) {
                                 detail_pic = detail_pics.toString().substring(0, detail_pics.toString().length() - 1);
                             }
                         }
@@ -246,12 +261,12 @@ public class alibabaUrl {
 
                     //创建所有详细信息的带参构造方法
                     Details details = new Details(keyid, key, title, price, shoptitle, management, address, tephone,
-                            fromImg, unit, DetailAddress, paramattr, mapStr, a, map1Str, detailsObject, detail_pic);
+                            fromImg, unit, DetailAddress, paramattr, mapStr, a, map1Str, detailsObject, detail_pic, contact);
                     baseDao.insertTpDetail(details);
                 }
 
             }
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -264,7 +279,7 @@ public class alibabaUrl {
      */
     public String getDetail(String href) {
         Request requestDetail = new Request.Builder().url(href).build();
-        HttpUtils.ResponseWrap responseDetail = HttpUtils.retryHttp(requestDetail, "gbk");
+        HttpUtils.ResponseWrap responseDetail = HttpUtils.retryHttpNoProxy(requestDetail, "gbk");
         String doc = "";
         if (responseDetail.isSuccess()) {
             String html = responseDetail.body;
