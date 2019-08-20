@@ -13,6 +13,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import utils.GetJsoupHtml;
 
 import java.util.ArrayList;
@@ -36,21 +37,25 @@ public class AlibabaDetail {
     private static WebDriver driver;
 
     static {
+
+        ChromeOptions options = new ChromeOptions();
+        //关闭使用ChromeDriver打开浏览器时上部提示语"Chrome正在受到自动软件的控制"
+        options.addArguments("disable-infobars");
+        options.addArguments("--incognito");
         System.setProperty("webdriver.chrome.driver", "C:\\Users\\Administrator\\AppData\\Local\\Google\\Chrome\\Application\\chromedriver.exe");
 //        ChromeOptions options = new ChromeOptions();
-        driver = new ChromeDriver();
+        driver = new ChromeDriver(options);
     }
 
-    BaseDao baseDao = new BaseDao();
+    private BaseDao baseDao = new BaseDao();
 
     public static void main(String[] args) {
         try {
             AlibabaDetail alibabaDetail = new AlibabaDetail();
             alibabaDetail.getDetail();
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
-        }finally {
-            driver.quit();
+        } finally {
             driver.close();
         }
     }
@@ -58,7 +63,7 @@ public class AlibabaDetail {
     /**
      * 获取详情
      */
-    public void getDetail(){
+    private  void getDetail() {
         Gson gsons = new Gson();
         //查询数据库中未有参数的数据
         List<Details> list = baseDao.selectDetails();
@@ -66,7 +71,7 @@ public class AlibabaDetail {
         for (Details detail : list) {
             driver.get(detail.getAlibburl());
             try {
-                Thread.sleep(3000);
+                Thread.sleep(4500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -80,124 +85,131 @@ public class AlibabaDetail {
 //                    e.printStackTrace();
 //                }
 //                String html = responseWrap.body;
-                String html = driver.getPageSource();
-                Document document = Jsoup.parse(html);
-                //判断商品是否下架的
-                String cc = document.select(".mod-Detail-offline-title").text();
-                if (cc.indexOf("下架") != -1) continue;
-                //判断页面存不存在的
-                String error = document.select("#content").text();
-                if (error.indexOf("您要访问的页面不存在") != -1) continue;
-                //获取标题的
-                String title = document.select("h1.d-title").text();
-                //获取图片集合的
-                Elements lis = document.select("ul.nav.nav-tabs.fd-clr").select("li");
-                List<String> imgUrlList = new ArrayList<>();
-                for (Element li : lis) {
-                    String data_imgs = li.attr("data-imgs");
-                    if (data_imgs == null) continue;
-                    //跳过html中的特殊符号转码的方法
-                    Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                    //fromJson 的作用是实现从Json相关对象到Java实体的方法
-                    AlibbdateilJson alibbdateilJson = gson.fromJson(data_imgs, AlibbdateilJson.class);
-                    if (alibbdateilJson == null) continue;
-                    String imgurl = alibbdateilJson.getOriginal();
-                    imgUrlList.add(imgurl);
-                }
-                String fromImg = String.join(",", imgUrlList);
-                //获取价格
-                String price = document.select("div.price-original-sku").text();
-                if (price == null || price.isEmpty()) price = document.select(".price").text();
-                price = price.replace("价格", "");
-                String unit = document.select("#mod-detail-price > div > table > tbody > tr.amount >" +
-                        " td.ladder-1-1 > span.unit").text();
-                String management = document.getElementsByClass("biz-type-model").text();
-                //获取公司名称
-                String shoptitle1 = document.select(".company-name").text();
-                String[] str = shoptitle1.split(" ");
-                String shoptitle = str[0];
-                //获取地址的
-                String address = document.select(".address").select(".disc").text();
-                //获取电话
-                String tephone = document.select(".m-mobilephone").select(".mobile-number").text();
-                String contactpage = document.select("li.contactinfo-page").select("a").attr("href");
-                String mapStr = "";
-                String map1Str = "";
-                Map<Object, String> map = new HashMap<>();
-                String paramattr = "";
-                if (!contactpage.isEmpty() && tephone.isEmpty() || tephone.indexOf("登录") != -1) {
-                    if (contactpage == "" || contactpage == null) continue;
-                    tephone = getcontact(contactpage);
-                }
-                //获取参数的
-                //先判断有没有obj-sku这个class，
-                if (html.indexOf("obj-sku") != -1) {
-                    //如果有就先获取下面的参数的属性
-                    paramattr = document.select(".obj-sku > div.obj-header > span").text();
-                    //再获取参数的name,price
-                    Elements params = document.select(".obj-sku > div.obj-content > table > tbody > tr");
-                    for (int t = 0; t < params.size(); t++) {
-                        String paramname = params.select(".name").get(t).text();
-                        //在获取参数的name的时候，要判断是不是空，如果是空就获取里面的alt属性的值
-                        if (paramname == "" || paramname == null || paramname.equals("")) {
-                            paramname = params.select(".name > span").get(t).attr("title");
-                        }
-                        String paramprice = params.select(".price").get(t).text();
-                        map.put(paramname, paramprice);
-                        mapStr = gsons.toJson(map);
-                    }
-                }
-                Map<Object, String> map1 = new HashMap<>();
-                //选取key和value的值存储成json格式，存在一个字段里面
-                Elements trs = document.select("#mod-detail-attributes > div.obj-content > table > tbody > tr");
-                for (Element tr : trs) {
-                    Elements de_feature = tr.select("td.de-feature");
-                    Elements de_value = tr.select("td.de-value");
-                    for (int i = 0; i < de_feature.size(); i++) {
-                        String k = de_feature.get(i).text();
-                        if (k.isEmpty()) continue;
-                        String v = de_value.get(i).text();
-                        map1.put(k, v);
-                        map1Str = gsons.toJson(map1);
-                    }
-                }
-
-                //获取详情信息与详情中的图片 开始 =================================
-                String detail_pic = "";
-                String detailsObject = "";
-                if (document.html().indexOf("desc-lazyload-container") != -1) {
-                    String detailUrl = document.getElementById("desc-lazyload-container").attr("data-tfs-url");
-                    Document doc = Jsoup.parse(getDetail(detailUrl));
-                    detailsObject = doc.html();
-
-                    if (doc.html().indexOf("img") != -1) {
-                        Elements elements = doc.getElementsByTag("img");
-                        StringBuilder detail_pics = new StringBuilder();
-                        for (Element el : elements) {
-                            detail_pics.append(el.attr("src")).append(",");
-                        }
-                        if (detail_pics.toString().length() > 0) {
-                            detail_pic = detail_pics.toString().substring(0, detail_pics.toString().length() - 1);
-                        }
-                    }
-                }
-                //获取详情信息与详情中的图片 结束 =================================
-
-                //创建所有详细信息的带参构造方法
-                Details details = new Details(detail.getId(),detail.getCatid(), detail.getCattitle(), title, price, shoptitle, management, address, tephone,
-                        fromImg, unit, DetailAddress, paramattr, mapStr, detail.getAlibburl(), map1Str, detailsObject, detail_pic);
-                baseDao.updateDetail(details);
+            String html = driver.getPageSource();
+            Document document = Jsoup.parse(html);
+            //判断商品是否下架的
+            String cc = document.select(".mod-Detail-offline-title").text();
+            if (cc.contains("下架")) {continue;}
+            //判断页面存不存在的
+            String error = document.select("#content").text();
+            if (error.contains("您要访问的页面不存在")) {continue;}
+            //获取标题的
+            String title = document.select("h1.d-title").text();
+            //获取图片集合的
+            Elements lis = document.select("ul.nav.nav-tabs.fd-clr").select("li");
+            List<String> imgUrlList = new ArrayList<>();
+            for (Element li : lis) {
+                String data_imgs = li.attr("data-imgs");
+                if (data_imgs == null) {continue;}
+                //跳过html中的特殊符号转码的方法
+                Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+                //fromJson 的作用是实现从Json相关对象到Java实体的方法
+                AlibbdateilJson alibbdateilJson = gson.fromJson(data_imgs, AlibbdateilJson.class);
+                if (alibbdateilJson == null) {continue;}
+                String imgurl = alibbdateilJson.getOriginal();
+                imgUrlList.add(imgurl);
             }
-       // }
+            String fromImg = String.join(",", imgUrlList);
+            //获取价格
+            String price = document.select("div.price-original-sku").text();
+            if (price == null || price.isEmpty()){ price = document.select(".price").text();}
+            price = price.replace("价格", "");
+            String unit = document.select("#mod-detail-price > div > table > tbody > tr.amount >" +
+                    " td.ladder-1-1 > span.unit").text();
+            String management = document.getElementsByClass("biz-type-model").text();
+            //获取公司名称
+            String shoptitle1 = document.select(".company-name").text();
+            String[] str = shoptitle1.split(" ");
+            String shoptitle = str[0];
+            //获取地址的
+            String address = document.select(".address").select(".disc").text();
+            //联系人
+            String contact = document.select(".contactSeller").select(".link").text();
+            if(contact.isEmpty()){
+                contact = document.select(".contactSeller").select("a").text();
+            }
+            //获取电话
+            String tephone = document.select(".m-mobilephone").select(".mobile-number").text();
+            String contactpage = document.select("li.contactinfo-page").select("a").attr("href");
+            String mapStr = "";
+            String map1Str = "";
+            Map<Object, String> map = new HashMap<>();
+            String paramattr = "";
+            boolean existed = !contactpage.isEmpty() && tephone.isEmpty() || tephone.contains("登录");
+            if (existed) {
+                if ("".equals(contactpage)) {continue;}
+                tephone = getcontact(contactpage);
+            }
+            //获取参数的
+            //先判断有没有obj-sku这个class，
+            if (html.contains("obj-sku") ) {
+                //如果有就先获取下面的参数的属性
+                paramattr = document.select(".obj-sku > div.obj-header > span").text();
+                //再获取参数的name,price
+                Elements params = document.select(".obj-sku > div.obj-content > table > tbody > tr");
+                for (int t = 0; t < params.size(); t++) {
+                    String paramname = params.select(".name").get(t).text();
+                    //在获取参数的name的时候，要判断是不是空，如果是空就获取里面的alt属性的值
+                    String space = "";
+                    if (space.equals(paramname) || paramname == null || paramname.equals(space)) {
+                        paramname = params.select(".name > span").get(t).attr("title");
+                    }
+                    String paramprice = params.select(".price").get(t).text();
+                    map.put(paramname, paramprice);
+                    mapStr = gsons.toJson(map);
+                }
+            }
+            Map<Object, String> map1 = new HashMap<>();
+            //选取key和value的值存储成json格式，存在一个字段里面
+            Elements trs = document.select("#mod-detail-attributes > div.obj-content > table > tbody > tr");
+            for (Element tr : trs) {
+                Elements de_feature = tr.select("td.de-feature");
+                Elements de_value = tr.select("td.de-value");
+                for (int i = 0; i < de_feature.size(); i++) {
+                    String k = de_feature.get(i).text();
+                    if (k.isEmpty()) {continue;}
+                    String v = de_value.get(i).text();
+                    map1.put(k, v);
+                    map1Str = gsons.toJson(map1);
+                }
+            }
+
+            //获取详情信息与详情中的图片 开始 =================================
+            String detailPic = "";
+            String detailsObject = "";
+            if (document.html().contains("desc-lazyload-container")) {
+                String detailUrl = document.getElementById("desc-lazyload-container").attr("data-tfs-url");
+                Document doc = Jsoup.parse(getDetail(detailUrl));
+                detailsObject = doc.html();
+
+                if (doc.html().contains("img")) {
+                    Elements elements = doc.getElementsByTag("img");
+                    StringBuilder detail_pics = new StringBuilder();
+                    for (Element el : elements) {
+                        detail_pics.append(el.attr("src")).append(",");
+                    }
+                    if (detail_pics.toString().length() > 0) {
+                        detailPic = detail_pics.toString().substring(0, detail_pics.toString().length() - 1);
+                    }
+                }
+            }
+            //获取详情信息与详情中的图片 结束 =================================
+
+            //创建所有详细信息的带参构造方法
+            Details details = new Details(detail.getId(), detail.getCatid(), detail.getCattitle(), title, price, shoptitle, management, address, tephone,
+                    fromImg, unit, DetailAddress, paramattr, mapStr, detail.getAlibburl(), map1Str, detailsObject, detailPic,contact );
+            baseDao.updateDetail(details);
+        }
+        // }
     }
 
     /**
      * 获取商品详情
      *
-     * @param href
-     * @return
+     * @param href 请求路径
+     * @return 返回 string 类型
      */
-    public String getDetail(String href) {
+    private String getDetail(String href) {
         Request requestDetail = new Request.Builder().url(href).build();
         HttpUtils.ResponseWrap responseDetail = HttpUtils.retryHttp(requestDetail, "gbk");
         String doc = "";
@@ -213,17 +225,19 @@ public class AlibabaDetail {
     public String getcontact(String contactpage) {
 
         String html = GetJsoupHtml.getHtml(contactpage, "gbk", cookie);
-        if (html == null) return null;
+        if (html == null){ return null;}
         Document document = Jsoup.parse(html);
         Elements dls = document.select("div.contcat-desc").select("dl");
         String tephone = "";
         for (Element dl : dls) {
             String dttext = dl.select("dt").text();
             String ddtext = dl.select("dd").text();
-            if (dttext.equals("移动电话：")) {
+            String phone = "移动电话：";
+            if (dttext.equals(phone)) {
                 tephone = ddtext;
             }
-            if (dttext.trim().equals("地      址：")) {
+            String address = "地      址：";
+            if (dttext.trim().equals(address)) {
                 DetailAddress = ddtext;
             }
         }
