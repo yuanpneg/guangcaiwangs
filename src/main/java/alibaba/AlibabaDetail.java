@@ -32,7 +32,13 @@ public class AlibabaDetail {
             "cna=tlISFVlH+XkCAd67LbaYgDZa; ali_ab=114.234.159.222.1552639160657.4; " +
             "ali_beacon_id=222.187.45.182.1553671046899.957414.5; cookie2=1d262906b04a564506c01318ce0bd83a; " +
             "t=e4b690e0c4e598ae3408b6041e077ee0; _tb_token_=e0eebede73776; __cn_logon__=false; " +
-            "h_keys=\"%u783c%u7ba1#%u8def%u706f%u6746#%u5355%u81c2%u8def%u706f#%u8def%u706f#%u94a2%u5e26%u589e%u5f3a%u6ce2%u7eb9%u7ba1#%u82b1%u5c97%u5ca9#%u6bdb%u9762%u82b1%u5c97%u5ca9#pe%u7ba1#%u710a%u63a5%u94a2%u7ba1#%u94a2%u7b4b\"; ad_prefer=\"2019/04/08 17:32:45\"; alicnweb=homeIdttS%3D95353286413309343774283810468514941277%7Ctouch_tb_at%3D1554771319476%7ChomeIdttSAction%3Dtrue%7Chp_newbuyerguide%3Dtrue; CNZZDATA1253659577=90154511-1552694034-%7C1554768221; _csrf_token=1554773145089; l=bBazx1Trvmv9wMW2BOCiquI8L__OHIRAguPRwC0Di_5IgOYsZBQOlG2nPHv6Vj5R_N8p4FNLRKy9-etlj; isg=BFxc8iMSbMTG0Ri4gvGM_gRuLXrOfQF3BsxOAjZd6ccqgf0LX-GPjdF74ancCThX";
+            "h_keys=\"%u783c%u7ba1#%u8def%u706f%u6746#%u5355%u81c2%u8def%u706f#%u8def%u706f#%u94a2%u5e26%u589e" +
+            "%u5f3a%u6ce2%u7eb9%u7ba1#%u82b1%u5c97%u5ca9#%u6bdb%u9762%u82b1%u5c97%u5ca9#pe%u7ba1#%u710a%u63a5%u9" +
+            "4a2%u7ba1#%u94a2%u7b4b\"; ad_prefer=\"2019/04/08 17:32:45\"; alicnweb=homeIdttS%3D9535328641330934377" +
+            "4283810468514941277%7Ctouch_tb_at%3D1554771319476%7ChomeIdttSAction%3Dtrue%7Chp_newbuyerguide%3Dtrue; CN" +
+            "ZZDATA1253659577=90154511-1552694034-%7C1554768221; _csrf_token=1554773145089; l=bBazx1Trvmv9wMW2BOCiq" +
+            "uI8L__OHIRAguPRwC0Di_5IgOYsZBQOlG2nPHv6Vj5R_N8p4FNLRKy9-etlj; isg=BFxc8iMSbMTG0Ri4gvGM_gRuLXrOfQF3BsxO" +
+            "AjZd6ccqgf0LX-GPjdF74ancCThX";
 
     private static WebDriver driver;
 
@@ -42,7 +48,8 @@ public class AlibabaDetail {
         //关闭使用ChromeDriver打开浏览器时上部提示语"Chrome正在受到自动软件的控制"
         options.addArguments("disable-infobars");
         options.addArguments("--incognito");
-        System.setProperty("webdriver.chrome.driver", "C:\\Users\\Administrator\\AppData\\Local\\Google\\Chrome\\Application\\chromedriver.exe");
+        System.setProperty("webdriver.chrome.driver", "C:\\Users\\Administrator\\AppData\\Local\\Google\\Chrome\\" +
+                "Application\\chromedriver.exe");
 //        ChromeOptions options = new ChromeOptions();
         driver = new ChromeDriver(options);
     }
@@ -75,16 +82,7 @@ public class AlibabaDetail {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-//            Request request = new Request.Builder().url(detail.getAlibburl()).build();
-//            HttpUtils.ResponseWrap responseWrap = HttpUtils.retryHttpNoProxy(request, "gbk");
-//            String html = GetJsoupHtml.getHtml(detail.getAlibburl(), "gbk", cookie);
-//            if (responseWrap.isSuccess()) {
-//                try {
-//                    Thread.sleep(3000);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-//                String html = responseWrap.body;
+
             String html = driver.getPageSource();
             Document document = Jsoup.parse(html);
             //判断商品是否下架的
@@ -99,12 +97,12 @@ public class AlibabaDetail {
             Elements lis = document.select("ul.nav.nav-tabs.fd-clr").select("li");
             List<String> imgUrlList = new ArrayList<>();
             for (Element li : lis) {
-                String data_imgs = li.attr("data-imgs");
-                if (data_imgs == null) {continue;}
+                String dataImgs = li.attr("data-imgs");
+                if (dataImgs == null) {continue;}
                 //跳过html中的特殊符号转码的方法
                 Gson gson = new GsonBuilder().disableHtmlEscaping().create();
                 //fromJson 的作用是实现从Json相关对象到Java实体的方法
-                AlibbdateilJson alibbdateilJson = gson.fromJson(data_imgs, AlibbdateilJson.class);
+                AlibbdateilJson alibbdateilJson = gson.fromJson(dataImgs, AlibbdateilJson.class);
                 if (alibbdateilJson == null) {continue;}
                 String imgurl = alibbdateilJson.getOriginal();
                 imgUrlList.add(imgurl);
@@ -163,12 +161,12 @@ public class AlibabaDetail {
             //选取key和value的值存储成json格式，存在一个字段里面
             Elements trs = document.select("#mod-detail-attributes > div.obj-content > table > tbody > tr");
             for (Element tr : trs) {
-                Elements de_feature = tr.select("td.de-feature");
-                Elements de_value = tr.select("td.de-value");
-                for (int i = 0; i < de_feature.size(); i++) {
-                    String k = de_feature.get(i).text();
+                Elements deFeature = tr.select("td.de-feature");
+                Elements devalue = tr.select("td.de-value");
+                for (int i = 0; i < deFeature.size(); i++) {
+                    String k = deFeature.get(i).text();
                     if (k.isEmpty()) {continue;}
-                    String v = de_value.get(i).text();
+                    String v = devalue.get(i).text();
                     map1.put(k, v);
                     map1Str = gsons.toJson(map1);
                 }
@@ -184,20 +182,22 @@ public class AlibabaDetail {
 
                 if (doc.html().contains("img")) {
                     Elements elements = doc.getElementsByTag("img");
-                    StringBuilder detail_pics = new StringBuilder();
+                    StringBuilder detailPics = new StringBuilder();
                     for (Element el : elements) {
-                        detail_pics.append(el.attr("src")).append(",");
+                        detailPics.append(el.attr("src")).append(",");
                     }
-                    if (detail_pics.toString().length() > 0) {
-                        detailPic = detail_pics.toString().substring(0, detail_pics.toString().length() - 1);
+                    if (detailPics.toString().length() > 0) {
+                        detailPic = detailPics.toString().substring(0, detailPics.toString().length() - 1);
                     }
                 }
             }
             //获取详情信息与详情中的图片 结束 =================================
 
             //创建所有详细信息的带参构造方法
-            Details details = new Details(detail.getId(), detail.getCatid(), detail.getCattitle(), title, price, shoptitle, management, address, tephone,
-                    fromImg, unit, DetailAddress, paramattr, mapStr, detail.getAlibburl(), map1Str, detailsObject, detailPic,contact );
+            Details details = new Details(detail.getId(), detail.getCatid(), detail.getCattitle(), title, price,
+                    shoptitle, management, address, tephone,
+                    fromImg, unit, DetailAddress, paramattr, mapStr, detail.getAlibburl(), map1Str, detailsObject,
+                    detailPic,contact );
             baseDao.updateDetail(details);
         }
         // }
